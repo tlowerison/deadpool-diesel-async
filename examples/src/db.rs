@@ -3,9 +3,9 @@ use deadpool_diesel_async::Manager;
 use diesel_async::AsyncPgConnection;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
-use tokio::sync::OwnedMutexGuard;
 
-type Pool = managed::Pool<Manager<AsyncPgConnection>>;
+pub type DbConn = AsyncPgConnection;
+type Pool = managed::Pool<Manager<DbConn>>;
 
 #[derive(Clone)]
 pub struct Db(pub Arc<Pool>);
@@ -33,32 +33,5 @@ impl Db {
         println!("Connected to database successfully");
 
         Ok(Db(Arc::new(pool)))
-    }
-}
-
-cfg_if! {
-    if #[cfg(not(feature = "db_conn_wrapper"))] {
-        pub type DbConn = OwnedMutexGuard<AsyncPgConnection>;
-    } else {
-        pub struct DbConn(pub OwnedMutexGuard<AsyncPgConnection>);
-
-        impl From<OwnedMutexGuard<AsyncPgConnection>> for DbConn {
-            fn from(async_pg_connection: OwnedMutexGuard<AsyncPgConnection>) -> Self {
-                Self(async_pg_connection)
-            }
-        }
-
-        impl Deref for DbConn {
-            type Target = AsyncPgConnection;
-            fn deref(&self) -> &Self::Target {
-                self.0.deref()
-            }
-        }
-
-        impl DerefMut for DbConn {
-            fn deref_mut(&mut self) -> &mut Self::Target {
-                self.0.deref_mut()
-            }
-        }
     }
 }

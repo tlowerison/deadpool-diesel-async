@@ -1,10 +1,10 @@
 use deadpool::async_trait;
 use deadpool::managed::{self, RecycleError, RecycleResult};
-use diesel::dsl::sql_query;
+use diesel::{backend::DieselReserveSpecialization, dsl::sql_query};
 use diesel_async::{AsyncConnection, RunQueryDsl};
 use std::{fmt, future::Future, marker::PhantomData, sync::Arc};
 use thiserror::Error;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, OwnedMutexGuard, TryLockError};
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -36,17 +36,25 @@ where
 impl<C> AsyncDieselConnection<C>
 where
     C: AsyncConnection + Send + 'static,
-    <C as AsyncConnection>::Backend: diesel::backend::DieselReserveSpecialization,
+    <C as AsyncConnection>::Backend: DieselReserveSpecialization,
 {
     pub async fn interact<F, FU, T, U>(&self, f: F) -> T
     where
         F: FnOnce(U) -> FU + Send + 'static,
         FU: Future<Output = T>,
         T: Send + 'static,
-        U: From<tokio::sync::OwnedMutexGuard<C>>,
+        U: From<OwnedMutexGuard<C>>,
     {
         let guard = self.arc_mutex.clone().lock_owned().await;
         f(guard.into()).await
+    }
+
+    pub async fn lock(&self) -> OwnedMutexGuard<C> {
+        self.arc_mutex.clone().lock_owned().await
+    }
+
+    pub fn try_lock(&self) -> Result<OwnedMutexGuard<C>, TryLockError> {
+        self.arc_mutex.clone().try_lock_owned()
     }
 
     pub async fn ping(&self) -> Result<(), diesel::result::Error> {
@@ -59,7 +67,7 @@ where
     }
 }
 
-/// [`Connection`] [`Manager`] for use with [`diesel_async`].
+/// [`AsyncConnection`] [`Manager`] for use with [`diesel-async`].
 ///
 /// See the [`deadpool` documentation](deadpool) for usage examples.
 ///
@@ -80,7 +88,7 @@ impl<C: AsyncConnection> fmt::Debug for Manager<C> {
 }
 
 impl<C: AsyncConnection> Manager<C> {
-    /// Creates a new [`Manager`] which establishes [`Connection`]s to the given
+    /// Creates a new [`Manager`] which establishes [`AsyncConnection`]s to the given
     /// `database_url`.
     #[must_use]
     pub fn new<S: Into<String>>(database_url: S) -> Self {
@@ -95,7 +103,7 @@ impl<C: AsyncConnection> Manager<C> {
 impl<C> managed::Manager for Manager<C>
 where
     C: AsyncConnection + 'static,
-    <C as AsyncConnection>::Backend: diesel::backend::DieselReserveSpecialization,
+    <C as AsyncConnection>::Backend: DieselReserveSpecialization,
 {
     type Type = AsyncDieselConnection<C>;
     type Error = Error;
