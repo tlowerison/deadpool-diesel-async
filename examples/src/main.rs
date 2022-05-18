@@ -12,7 +12,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut conn = db.get().await?.lock().await;
     let one = query(conn.deref_mut()).await?;
-    println!("{one} == 1");
+    assert!(one == 1);
 
     Ok(())
 }

@@ -30,7 +30,6 @@ impl Db {
 
         let db_conn = pool.get().await?;
         db_conn.ping().await?;
-        println!("Connected to database successfully");
 
         Ok(Db(Arc::new(pool)))
     }
