@@ -2,9 +2,9 @@ use deadpool::async_trait;
 use deadpool::managed::{self, RecycleError, RecycleResult};
 use diesel::{backend::DieselReserveSpecialization, dsl::sql_query};
 use diesel_async::{AsyncConnection, RunQueryDsl};
-use std::{fmt, future::Future, marker::PhantomData, sync::Arc};
+use std::{borrow::Cow, fmt, marker::PhantomData};
+use std::ops::{Deref, DerefMut};
 use thiserror::Error;
-use tokio::sync::{Mutex, OwnedMutexGuard, TryLockError};
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -15,70 +15,58 @@ pub enum Error {
 }
 
 #[derive(Clone, Debug)]
-pub struct AsyncDieselConnection<C>
-where
-    C: Send + 'static,
-{
-    arc_mutex: Arc<Mutex<C>>,
-}
+pub struct Connection<C>(C);
 
-impl<C> From<C> for AsyncDieselConnection<C>
-where
-    C: Send + 'static,
-{
-    fn from(c: C) -> Self {
-        Self {
-            arc_mutex: Arc::new(Mutex::new(c)),
-        }
+impl<C> AsMut<C> for Connection<C> {
+    fn as_mut(&mut self) -> &mut C {
+        &mut self.0
     }
 }
 
-impl<C> AsyncDieselConnection<C>
+impl<C> AsRef<C> for Connection<C> {
+    fn as_ref(&self) -> &C {
+        &self.0
+    }
+}
+
+impl<C> From<C> for Connection<C> {
+    fn from(conn: C) -> Self {
+        Self(conn)
+    }
+}
+
+impl<C> Deref for Connection<C> {
+    type Target = C;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<C> DerefMut for Connection<C> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<C> Connection<C>
 where
     C: AsyncConnection + Send + 'static,
     <C as AsyncConnection>::Backend: DieselReserveSpecialization,
 {
-    pub async fn interact<F, FU, T, U>(&self, f: F) -> T
-    where
-        F: FnOnce(U) -> FU + Send + 'static,
-        FU: Future<Output = T>,
-        T: Send + 'static,
-        U: From<OwnedMutexGuard<C>>,
-    {
-        let guard = self.arc_mutex.clone().lock_owned().await;
-        f(guard.into()).await
-    }
-
-    pub async fn lock(&self) -> OwnedMutexGuard<C> {
-        self.arc_mutex.clone().lock_owned().await
-    }
-
-    pub fn try_lock(&self) -> Result<OwnedMutexGuard<C>, TryLockError> {
-        self.arc_mutex.clone().try_lock_owned()
-    }
-
-    pub async fn ping(&self) -> Result<(), diesel::result::Error> {
-        let arc_mutex = self.arc_mutex.clone();
-        let mut guard = arc_mutex.lock().await;
+    pub async fn ping(&mut self) -> Result<(), diesel::result::Error> {
         sql_query("SELECT 1")
-            .execute(&mut *guard)
+            .execute(&mut self.0)
             .await
             .map(|_| ())
     }
 }
 
-/// [`AsyncConnection`] [`Manager`] for use with [`diesel-async`].
-///
-/// See the [`deadpool` documentation](deadpool) for usage examples.
-///
-/// [`Manager`]: managed::Manager
-pub struct Manager<C: AsyncConnection> {
-    database_url: String,
+pub struct Manager<C> {
+    database_url: Cow<'static, str>,
     _marker: PhantomData<fn() -> C>,
 }
 
-// Implemented manually to avoid unnecessary trait bound on `C` type parameter.
-impl<C: AsyncConnection> fmt::Debug for Manager<C> {
+impl<C> fmt::Debug for Manager<C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Manager")
             .field("database_url", &self.database_url)
@@ -87,11 +75,9 @@ impl<C: AsyncConnection> fmt::Debug for Manager<C> {
     }
 }
 
-impl<C: AsyncConnection> Manager<C> {
-    /// Creates a new [`Manager`] which establishes [`AsyncConnection`]s to the given
-    /// `database_url`.
+impl<C> Manager<C> {
     #[must_use]
-    pub fn new<S: Into<String>>(database_url: S) -> Self {
+    pub fn new<S: Into<Cow<'static, str>>>(database_url: S) -> Self {
         Manager {
             database_url: database_url.into(),
             _marker: PhantomData,
@@ -105,15 +91,15 @@ where
     C: AsyncConnection + 'static,
     <C as AsyncConnection>::Backend: DieselReserveSpecialization,
 {
-    type Type = AsyncDieselConnection<C>;
+    type Type = Connection<C>;
     type Error = Error;
 
     async fn create(&self) -> Result<Self::Type, Self::Error> {
-        Ok(AsyncDieselConnection::from(C::establish(&self.database_url).await.map_err(Error::from)?))
+        Ok(Connection::from(C::establish(&self.database_url).await.map_err(Error::from)?))
     }
 
-    async fn recycle(&self, async_diesel_conn: &mut Self::Type) -> RecycleResult<Self::Error> {
-        async_diesel_conn
+    async fn recycle(&self, connection: &mut Self::Type) -> RecycleResult<Self::Error> {
+        connection
             .ping()
             .await
             .map(|_| ())

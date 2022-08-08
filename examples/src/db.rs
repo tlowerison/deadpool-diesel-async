@@ -28,7 +28,7 @@ impl Db {
         let manager = Manager::new(database_url);
         let pool: Pool = managed::Pool::builder(manager).build()?;
 
-        let db_conn = pool.get().await?;
+        let mut db_conn = pool.get().await?;
         db_conn.ping().await?;
 
         Ok(Db(Arc::new(pool)))
