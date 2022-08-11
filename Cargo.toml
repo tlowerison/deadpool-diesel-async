@@ -1,6 +1,6 @@
 [package]
 name = "deadpool-diesel-async"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Trey Lowerison <trey@sidechainme.com>"]
 edition = "2021"
 

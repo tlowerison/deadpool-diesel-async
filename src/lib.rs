@@ -2,7 +2,8 @@ use deadpool::async_trait;
 use deadpool::managed::{self, RecycleError, RecycleResult};
 use diesel::{backend::DieselReserveSpecialization, dsl::sql_query};
 use diesel_async::{AsyncConnection, RunQueryDsl};
-use std::{borrow::Cow, fmt, marker::PhantomData};
+use std::{fmt, marker::PhantomData};
+use std::borrow::{Borrow, BorrowMut, Cow};
 use std::ops::{Deref, DerefMut};
 use thiserror::Error;
 
@@ -26,6 +27,18 @@ impl<C> AsMut<C> for Connection<C> {
 impl<C> AsRef<C> for Connection<C> {
     fn as_ref(&self) -> &C {
         &self.0
+    }
+}
+
+impl<C> Borrow<C> for Connection<C> {
+    fn borrow(&self) -> &C {
+        &self.0
+    }
+}
+
+impl<C> BorrowMut<C> for Connection<C> {
+    fn borrow_mut(&mut self) -> &mut C {
+        &mut self.0
     }
 }
 
