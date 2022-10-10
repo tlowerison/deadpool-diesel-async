@@ -4,11 +4,11 @@ version = "0.2.2"
 edition = "2021"
 
 [dependencies]
-deadpool = { version = "0.9.3", features = ["managed", "rt_tokio_1"] }
+deadpool = { version = "0.9.5", features = ["managed", "rt_tokio_1"] }
 deadpool-diesel-async = { path = ".." }
-diesel = { version = "2.0.0-rc.0", default-features = true, features = ["extras", "numeric", "postgres"] }
-diesel-async = { rev = "3c9e976", git = "https://github.com/weiznich/diesel_async", default-features = false, features = ["postgres"] }
-tokio = { version = "1.17.0", features = ["full"] }
+diesel = { version = "2.0.0", default-features = true, features = ["extras", "numeric", "postgres"] }
+diesel-async = { rev = "96688d4", git = "https://github.com/weiznich/diesel_async", default-features = false, features = ["postgres"] }
+tokio = { version = "1.21.2", features = ["full"] }
 
 [features]
 default = []

@@ -5,11 +5,11 @@ authors = ["Trey Lowerison <trey@sidechainme.com>"]
 edition = "2021"
 
 [dependencies]
-deadpool = { version = "0.9.3", features = ["managed", "rt_tokio_1"] }
-diesel = { version = "2.0.0-rc.0", default-features = false }
-diesel-async = { rev = "3c9e976", git = "https://github.com/weiznich/diesel_async", default-features = false }
-thiserror = "1.0.30"
-tokio = "1.17.0"
+deadpool = { version = "0.9.5", features = ["managed", "rt_tokio_1"] }
+diesel = { version = "2.0.0", default-features = false }
+diesel-async = { rev = "96688d4", git = "https://github.com/weiznich/diesel_async", default-features = false }
+thiserror = "1.0.37"
+tokio = "1.21.2"
 
 [features]
 mysql = ["diesel/mysql", "diesel-async/mysql"]
