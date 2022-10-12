@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 deadpool = { version = "0.9.5", features = ["managed", "rt_tokio_1"] }
 diesel = { version = "2.0.0", default-features = false }
-diesel-async = { rev = "f3076b4", git = "https://github.com/sidechainme/diesel_async", default-features = false }
+diesel-async = { rev = "87aada7", git = "https://github.com/sidechainme/diesel_async", default-features = false }
 thiserror = "1.0.37"
 tokio = "1.21.2"
 
