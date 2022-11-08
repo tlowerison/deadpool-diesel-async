@@ -2,9 +2,9 @@ use deadpool::async_trait;
 use deadpool::managed::{self, RecycleError, RecycleResult};
 use diesel::{backend::DieselReserveSpecialization, dsl::sql_query};
 use diesel_async::{AsyncConnection, RunQueryDsl};
-use std::{fmt, marker::PhantomData};
 use std::borrow::{Borrow, BorrowMut, Cow};
 use std::ops::{Deref, DerefMut};
+use std::{fmt, marker::PhantomData};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -67,10 +67,7 @@ where
     <C as AsyncConnection>::Backend: DieselReserveSpecialization,
 {
     pub async fn ping(&mut self) -> Result<(), diesel::result::Error> {
-        sql_query("SELECT 1")
-            .execute(&mut self.0)
-            .await
-            .map(|_| ())
+        sql_query("SELECT 1").execute(&mut self.0).await.map(|_| ())
     }
 }
 
@@ -81,20 +78,14 @@ pub struct Manager<C> {
 
 impl<C> fmt::Debug for Manager<C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Manager")
-            .field("database_url", &self.database_url)
-            .field("_marker", &self._marker)
-            .finish()
+        f.debug_struct("Manager").field("database_url", &self.database_url).field("_marker", &self._marker).finish()
     }
 }
 
 impl<C> Manager<C> {
     #[must_use]
     pub fn new<S: Into<Cow<'static, str>>>(database_url: S) -> Self {
-        Manager {
-            database_url: database_url.into(),
-            _marker: PhantomData,
-        }
+        Manager { database_url: database_url.into(), _marker: PhantomData }
     }
 }
 
@@ -112,11 +103,6 @@ where
     }
 
     async fn recycle(&self, connection: &mut Self::Type) -> RecycleResult<Self::Error> {
-        connection
-            .ping()
-            .await
-            .map(|_| ())
-            .map_err(Error::Ping)
-            .map_err(|err| RecycleError::Message(format!("{err}")))
+        connection.ping().await.map(|_| ()).map_err(Error::Ping).map_err(|err| RecycleError::Message(format!("{err}")))
     }
 }

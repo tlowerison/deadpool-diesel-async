@@ -18,7 +18,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn query(db_conn: &mut DbConn) -> Result<usize, diesel::result::Error> {
-    sql_query("select 1")
-        .execute(db_conn)
-        .await
+    sql_query("select 1").execute(db_conn).await
 }
