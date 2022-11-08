@@ -1,0 +1,49 @@
+# See https://pre-commit.com for more information
+# NOTE: must run `pre-commit install --hook-type pre-commit --hook-type pre-push`
+default_install_hook_types:
+  - pre-commit
+  - pre-push
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.2.0
+    hooks:
+      - id: check-added-large-files
+        stages: [commit, push]
+
+      - id: check-merge-conflict
+        args: ["--assume-in-merge"]
+        stages: [commit, push]
+
+      - id: check-symlinks
+        stages: [commit, push]
+
+      - id: check-toml
+        stages: [commit, push]
+
+      - id: check-yaml
+        args: ["--allow-multiple-documents"]
+        stages: [commit, push]
+
+      - id: trailing-whitespace
+        stages: [commit, push]
+
+  - repo: local
+    hooks:
+      - id: cargo-clippy
+        name: cargo-clippy
+        description: lint the minimal changed packages in the cargo workspace
+        stages: [push]
+        entry: cargo clippy
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+      - id: cargo-fmt
+        name: cargo-fmt
+        description: format files with cargo fmt
+        stages: [commit, push]
+        entry: cargo fmt
+        language: system
+        types: [rust]
+        args: ["--"]
