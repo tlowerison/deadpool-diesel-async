@@ -7,7 +7,7 @@ edition = "2021"
 deadpool = { version = "0.9.5", features = ["managed", "rt_tokio_1"] }
 deadpool-diesel-async = { path = ".." }
 diesel = { version = "2.0.0", default-features = true, features = ["extras", "numeric", "postgres"] }
-diesel-async = { rev = "87aada7", git = "https://github.com/sidechainme/diesel_async", default-features = false, features = ["postgres"] }
+diesel-async = { version ="0.1.1", default-features = false , features = ["postgres"] }
 tokio = { version = "1.21.2", features = ["full"] }
 
 [features]
